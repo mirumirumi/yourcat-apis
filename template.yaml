@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  your-cat
+
+  Sample SAM Template for your-cat
+
+Globals:
+  Function:
+    MemorySize: 3333
+    Timeout: 13
+  Api:
+    OpenApiVersion: 3.0.2  # 勝手にStageが作られる回避：https://is.gd/4gPtX6
+
+
+Parameters:
+  ResourcePrefix:
+    Type: String
+    Default: yourcat
+  EnvironmentName:
+    Type: String
+    AllowedValues:
+      - dev
+      - prd
+
+
+Resources:
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn:
+     - RestApis
+     - RestApisStage  # https://is.gd/CxvJeX
+    Properties:
+      Name: !Sub ${ResourcePrefix}-${EnvironmentName}-api-key
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref RestApis
+          StageName:
+            !Sub ${ResourcePrefix}-${EnvironmentName}-apis
+  ApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - RestApis
+      - RestApisStage  # https://is.gd/CxvJeX
+    Properties:
+      ApiStages:
+        - ApiId: !Ref RestApis
+          Stage:
+            !Sub ${ResourcePrefix}-${EnvironmentName}-apis
+      Throttle:
+        BurstLimit: 2000
+        RateLimit: 1000
+      UsagePlanName: !Sub ${ResourcePrefix}-${EnvironmentName}-api-usage-plan
+  ApiUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    DependsOn:
+      - ApiKey
+      - ApiUsagePlan
+    Properties :
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref ApiUsagePlan
+
+  RestApis:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub ${ResourcePrefix}-${EnvironmentName}
+      StageName: !Sub ${ResourcePrefix}-${EnvironmentName}-apis
+      # API側の定義でキー必須にする(Auth:を記述)とOPTIONSで引っかかるので不記載
+      # Auth:
+      #   ApiKeyRequired: true
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token''"
+        AllowMethods: "'POST, OPTIONS'"
+  IsTheCatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-IsTheCat
+      CodeUri: apis/
+      Handler: is_the_cat.lambda_handler
+      Runtime: python3.8
+      Policies:
+        - RekognitionDetectOnlyPolicy: {}
+      Layers:
+        - !Ref ImportModulesLayer
+      Events:
+        RestApis:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApis
+            Path: /is-the-cat
+            Method: post
+            # POSTだけにキー必須になるようにこっちで書く
+            Auth:
+              ApiKeyRequired: true
+
+  ImportModulesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Layer description
+      ContentUri: "import_modules_layer/"
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      BuildMethod: python3.8
+
+
+
+# Outputs:
+
+
