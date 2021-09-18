@@ -2,6 +2,7 @@ import re
 import json
 import boto3
 import base64
+import proxy_response
 from boto3 import Session
 from aws_lambda_powertools import Logger
 
@@ -29,14 +30,8 @@ def lambda_handler(event, context):
             "Bytes": byte
         })
     except Exception as e:
-        logger.exception(e)
-        return {
-            "statusCode": 500,
-            "headers": {
-                "Access-Control-Allow-Origin": "*"
-            },
-            "body": "failed detect labels"
-        }
+        logger.exception(f"failed detect labels: {e}")
+        return proxy_response._500()
     else:
         logger.info(res)
 
@@ -47,13 +42,7 @@ def lambda_handler(event, context):
 
     logger.info(result)
     print("🍊")
-    return  {
-        "statusCode": 200,
-        "headers": {
-            "Access-Control-Allow-Origin": "*"
-        },
-        "body": json.dumps(result)
-    }
+    return proxy_response._200(result)
 
 
 def get_label_data(label_datas, name):
