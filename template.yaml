@@ -25,6 +25,23 @@ Parameters:
 
 
 Resources:
+  ImageS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+
+  RestApis:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub ${ResourcePrefix}-${EnvironmentName}
+      StageName: !Sub ${ResourcePrefix}-${EnvironmentName}-apis
+      # API側の定義でキー必須にする(Auth:を記述)とOPTIONSで引っかかるので不記載
+      # Auth:
+      #   ApiKeyRequired: true
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token''"
+        AllowMethods: "'POST, OPTIONS'"
   ApiKey:
     Type: AWS::ApiGateway::ApiKey
     DependsOn:
@@ -61,18 +78,6 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref ApiUsagePlan
 
-  RestApis:
-    Type: AWS::Serverless::Api
-    Properties:
-      Name: !Sub ${ResourcePrefix}-${EnvironmentName}
-      StageName: !Sub ${ResourcePrefix}-${EnvironmentName}-apis
-      # API側の定義でキー必須にする(Auth:を記述)とOPTIONSで引っかかるので不記載
-      # Auth:
-      #   ApiKeyRequired: true
-      Cors:
-        AllowOrigin: "'*'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token''"
-        AllowMethods: "'POST, OPTIONS'"
   IsTheCatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -84,6 +89,7 @@ Resources:
         - RekognitionDetectOnlyPolicy: {}
       Layers:
         - !Ref ImportModulesLayer
+        - !Ref UtilsLayer
       Events:
         RestApis:
           Type: Api
@@ -94,12 +100,47 @@ Resources:
             # POSTだけにキー必須になるようにこっちで書く
             Auth:
               ApiKeyRequired: true
+  PostImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-PostImage
+      CodeUri: apis/
+      Handler: post_image.lambda_handler
+      Runtime: python3.8
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref ImageS3Bucket
+      Layers:
+        - !Ref ImportModulesLayer
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          Image_S3_BUCKET_NAME: !Ref ImageS3Bucket
+      Events:
+        RestApis:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApis
+            Path: /post-image
+            Method: post
+            # POSTだけにキー必須になるようにこっちで書く
+            Auth:
+              ApiKeyRequired: true
 
   ImportModulesLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      Description: Layer description
+      Description: import modules containing PowerTools
       ContentUri: "import_modules_layer/"
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      BuildMethod: python3.8
+  UtilsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: utils
+      ContentUri: "utils_layer/"
       CompatibleRuntimes:
         - python3.8
     Metadata:
