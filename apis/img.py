@@ -11,7 +11,7 @@ from aws_lambda_powertools import Logger
 logger = Logger()
 
 
-def to_jpg(event):
+def to_jpg(event: dict) -> str:
     # base64 to bytes
     body = json.loads(event)
     temp = re.sub("data:image\/.*?;base64,", "", body["img"])

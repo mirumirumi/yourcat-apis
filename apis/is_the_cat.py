@@ -48,7 +48,7 @@ def lambda_handler(event, context):
     return proxy_response._200(result)
 
 
-def get_label_data(label_datas, name):
+def get_label_data(label_datas: dict, name: str) -> dict:
     result = {}
     for label in label_datas["Labels"]:
         if label["Name"] == name:
