@@ -81,7 +81,7 @@ Resources:
   IsTheCatFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-IsTheCat
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-is-the-cat
       CodeUri: functions/
       Handler: is_the_cat.lambda_handler
       Runtime: python3.8
@@ -103,7 +103,7 @@ Resources:
   PostImageFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-PostImage
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-post-image
       CodeUri: functions/
       Handler: post_image.lambda_handler
       Runtime: python3.8
@@ -146,6 +146,165 @@ Resources:
     Metadata:
       BuildMethod: python3.8
 
+  ImageDataDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+      KeySchema: 
+        - AttributeName: file_id
+          KeyType: HASH
+      AttributeDefinitions: 
+        - AttributeName: file_id
+          AttributeType: S
+        # - AttributeName: increment_num
+        #   AttributeType: N
+        # - AttributeName: timestamp
+        #   AttributeType: S
+      BillingMode: PROVISIONED
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+  ImageCountDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
+      KeySchema: 
+        - AttributeName: count
+          KeyType: HASH
+      AttributeDefinitions: 
+        - AttributeName: count
+          AttributeType: N
+      BillingMode: PROVISIONED
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  ImageDataRCUScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn:
+      - ImageDataDynamoDBTable
+    Properties: 
+      MinCapacity: 1
+      MaxCapacity: 30
+      ResourceId: !Join ["", ["table/", !Ref ImageDataDynamoDBTable]]
+      RoleARN: !GetAtt AutoScalingRole.Arn
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      ServiceNamespace: dynamodb
+  ImageDataWCUScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn:
+      - ImageDataDynamoDBTable
+    Properties: 
+      MinCapacity: 1
+      MaxCapacity: 30
+      ResourceId: !Join ["", ["table/", !Ref ImageDataDynamoDBTable]]
+      RoleARN: !GetAtt AutoScalingRole.Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+  ImageCountRCUScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn:
+      - ImageCountDynamoDBTable
+    Properties: 
+      MinCapacity: 1
+      MaxCapacity: 30
+      ResourceId: !Join ["", ["table/", !Ref ImageCountDynamoDBTable]]
+      RoleARN: !GetAtt AutoScalingRole.Arn
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      ServiceNamespace: dynamodb
+  ImageCountWCUScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn:
+      - ImageCountDynamoDBTable
+    Properties: 
+      MinCapacity: 1
+      MaxCapacity: 30
+      ResourceId: !Join ["", ["table/", !Ref ImageCountDynamoDBTable]]
+      RoleARN: !GetAtt AutoScalingRole.Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+
+  ImageDataReadScalingPolicy: 
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties: 
+      PolicyName: image-data-read-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: 
+        Ref: ImageDataRCUScalableTarget
+      TargetTrackingScalingPolicyConfiguration: 
+        TargetValue: 70
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification: 
+          PredefinedMetricType: DynamoDBReadCapacityUtilization
+  ImageDataWriteScalingPolicy: 
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties: 
+      PolicyName: image-data-write-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: 
+        Ref: ImageDataWCUScalableTarget
+      TargetTrackingScalingPolicyConfiguration: 
+        TargetValue: 70
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification: 
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+  ImageCountReadScalingPolicy: 
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties: 
+      PolicyName: image-count-read-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: 
+        Ref: ImageCountRCUScalableTarget
+      TargetTrackingScalingPolicyConfiguration: 
+        TargetValue: 70
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification: 
+          PredefinedMetricType: DynamoDBReadCapacityUtilization
+  ImageCountWriteScalingPolicy: 
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
+    Properties: 
+      PolicyName: image-count-write-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: 
+        Ref: ImageCountWCUScalableTarget
+      TargetTrackingScalingPolicyConfiguration: 
+        TargetValue: 70
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification: 
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+
+  AutoScalingRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - application-autoscaling.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Path: "/"
+      Policies: 
+        - PolicyName: autoscaling-role-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: Allow
+                Action:          
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:UpdateTable"
+                  - "cloudwatch:PutMetricAlarm"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:SetAlarmState"
+                  - "cloudwatch:DeleteAlarms"
+                Resource: "*"
 
 
 # Outputs:
