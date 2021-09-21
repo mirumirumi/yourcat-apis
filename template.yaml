@@ -110,12 +110,18 @@ Resources:
       Policies:
         - S3FullAccessPolicy:
             BucketName: !Ref ImageS3Bucket
+        - DynamoDBCrudPolicy:
+            TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+        - DynamoDBCrudPolicy:
+            TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
       Layers:
         - !Ref ImportModulesLayer
         - !Ref UtilsLayer
       Environment:
         Variables:
           Image_S3_BUCKET_NAME: !Ref ImageS3Bucket
+          IMAGE_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+          IMAGE_COUNT_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
       Events:
         RestApis:
           Type: Api
@@ -156,10 +162,6 @@ Resources:
       AttributeDefinitions: 
         - AttributeName: file_id
           AttributeType: S
-        # - AttributeName: increment_num
-        #   AttributeType: N
-        # - AttributeName: timestamp
-        #   AttributeType: S
       BillingMode: PROVISIONED
       ProvisionedThroughput: 
         ReadCapacityUnits: 5
@@ -169,11 +171,11 @@ Resources:
     Properties: 
       TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
       KeySchema: 
-        - AttributeName: count
+        - AttributeName: type
           KeyType: HASH
       AttributeDefinitions: 
-        - AttributeName: count
-          AttributeType: N
+        - AttributeName: type
+          AttributeType: S
       BillingMode: PROVISIONED
       ProvisionedThroughput: 
         ReadCapacityUnits: 5
