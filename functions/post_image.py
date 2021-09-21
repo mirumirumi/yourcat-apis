@@ -39,6 +39,7 @@ def lambda_handler(event, context):
         })
     except Exception as e:
         logger.exception(e)
+        return proxy_response._500()
     else:
         if not res.get("Item") is None:
             item = res["Item"]
@@ -58,6 +59,7 @@ def lambda_handler(event, context):
         })
     except Exception as e:
         logger.exception(e)
+        return proxy_response._500()
     else:
         logger.info(res)
 
@@ -84,6 +86,7 @@ def lambda_handler(event, context):
         })
     except Exception as e:
         logger.exception(e)
+        return proxy_response._500()
     else:
         logger.info(res)
 
