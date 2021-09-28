@@ -29,6 +29,22 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+  ImageS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageS3Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref ImageS3Bucket
+                - /*
+            Principal: '*'
 
   RestApis:
     Type: AWS::Serverless::Api
@@ -78,6 +94,38 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref ApiUsagePlan
 
+  GetImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-image
+      CodeUri: functions/
+      Handler: get_image.lambda_handler
+      Runtime: python3.8
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref ImageS3Bucket
+        - DynamoDBCrudPolicy:
+            TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+        - DynamoDBCrudPolicy:
+            TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
+      Layers:
+        - !Ref ImportModulesLayer
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          Image_S3_BUCKET_NAME: !Ref ImageS3Bucket
+          IMAGE_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+          IMAGE_COUNT_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
+      Events:
+        RestApis:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApis
+            Path: /get-image
+            Method: get
+            # GETだけにキー必須になるようにこっちで書く
+            Auth:
+              ApiKeyRequired: true
   IsTheCatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -157,11 +205,11 @@ Resources:
     Properties: 
       TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
       KeySchema: 
-        - AttributeName: file_id
+        - AttributeName: increment_num
           KeyType: HASH
       AttributeDefinitions: 
-        - AttributeName: file_id
-          AttributeType: S
+        - AttributeName: increment_num
+          AttributeType: N
       BillingMode: PROVISIONED
       ProvisionedThroughput: 
         ReadCapacityUnits: 5

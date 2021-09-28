@@ -3,8 +3,8 @@ import img
 import json
 import boto3
 import proxy_response
-from datetime import datetime, timezone, timedelta
 from aws_lambda_powertools import Logger
+from datetime import datetime, timezone, timedelta
 
 # PowerTools
 logger = Logger()
@@ -19,9 +19,8 @@ IMAGE_COUNT_TABLE_NAME = os.getenv("IMAGE_COUNT_TABLE_NAME")
 image_table = boto3.resource("dynamodb").Table(IMAGE_TABLE_NAME)
 image_count_table = boto3.resource("dynamodb").Table(IMAGE_COUNT_TABLE_NAME)
 
-# datetime
+# timezone
 JST = timezone(timedelta(hours=+9), "JST")
-now = datetime.now(JST).isoformat()
 
 
 @logger.inject_lambda_context()
@@ -50,6 +49,7 @@ def lambda_handler(event, context):
 
     # write image data
     file_id, ext = os.path.splitext(key)
+    now = datetime.now(JST).isoformat()
     try:
         res = image_table.put_item(Item={
             "file_id": file_id,
