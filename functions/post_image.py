@@ -68,7 +68,7 @@ def lambda_handler(event, context):
         file = f.read()
         logger.info(file)
         try:
-            res = obj.put(Body=file)
+            res = obj.put(Body=file, ContentType="image/jpeg")
         except Exception as e:
             logger.exception(e)
             return proxy_response._500()
