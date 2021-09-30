@@ -18,8 +18,7 @@ bucket_name = os.getenv("Image_S3_BUCKET_NAME")
 # DynamoDB
 IMAGE_TABLE_NAME = os.getenv("IMAGE_TABLE_NAME")
 IMAGE_COUNT_TABLE_NAME = os.getenv("IMAGE_COUNT_TABLE_NAME")
-# image_table = boto3.resource("dynamodb").Table(IMAGE_TABLE_NAME)
-image_table = boto3.resource("dynamodb").Table("sample")
+image_table = boto3.resource("dynamodb").Table(IMAGE_TABLE_NAME)
 image_count_table = boto3.resource("dynamodb").Table(IMAGE_COUNT_TABLE_NAME)
 
 
