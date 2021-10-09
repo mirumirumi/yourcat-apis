@@ -17,14 +17,13 @@ rekognition_client = session.client("rekognition")
 @logger.inject_lambda_context()
 def lambda_handler(event, context):
     print("🍊")
-    logger.info(event)
+    # logger.info(event)  # binary logs...
 
     key = img.to_jpg(event["body"])
 
     # rekognition
     with open("/tmp/" + key, mode="rb") as f:
         file = f.read()
-        logger.info(file)
         try:
             res = rekognition_client.detect_labels(Image={
                 "Bytes": file
