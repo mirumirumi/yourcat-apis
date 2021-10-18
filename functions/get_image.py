@@ -51,6 +51,7 @@ def lambda_handler(event, context):
 
     # get image urls
     result = []
+    i = image_count
     for num in num_list:
         try:
             res = image_table.get_item(Key={
@@ -61,6 +62,8 @@ def lambda_handler(event, context):
         else:
             if res.get("Item") is None:
                 logger.error(f"number: {num} was empty...")
+                num_list.extend([i + 1])
+                i += 1
             else:
                 result.append(res["Item"])
 
