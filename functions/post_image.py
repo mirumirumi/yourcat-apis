@@ -26,9 +26,10 @@ JST = timezone(timedelta(hours=+9), "JST")
 @logger.inject_lambda_context()
 def lambda_handler(event, context):
     print("🍊")
-    logger.info(event)
+    body = json.loads(event["body"])
+    logger.info(body)
 
-    key = img.to_jpg(event["body"])
+    key = img.to_jpg(body["image_data"]["base64"])
     obj = s3.Object(bucket_name, key)
 
     # get image count
@@ -50,11 +51,17 @@ def lambda_handler(event, context):
     # write image data
     file_id, ext = os.path.splitext(key)
     now = datetime.now(JST).isoformat()
+    width = body["image_data"]["width"]
+    height = body["image_data"]["height"]
     try:
         res = image_table.put_item(Item={
+            "increment_num": image_count + 1,
             "file_id": file_id,
             "extension": ext,
-            "increment_num": image_count + 1,
+            "size": {
+                "width": width,
+                "height": height
+            },
             "timestamp": now
         })
     except Exception as e:
@@ -91,7 +98,13 @@ def lambda_handler(event, context):
         logger.info(res)
 
     print("🍊")
-    return proxy_response._200(key)
+    return proxy_response._200({
+        "file_id": key,
+        "size": {
+            "width": width,
+            "height": height
+        }
+    })
 
 
 def put_initial():
