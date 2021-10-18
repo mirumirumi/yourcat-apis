@@ -17,9 +17,10 @@ rekognition_client = session.client("rekognition")
 @logger.inject_lambda_context()
 def lambda_handler(event, context):
     print("🍊")
-    # logger.info(event)  # binary logs...
+    body = json.loads(event["body"])
+    logger.info(body)
 
-    key = img.to_jpg(event["body"])
+    key = img.to_jpg(body["image_data"]["base64"])
 
     # rekognition
     with open("/tmp/" + key, mode="rb") as f:
