@@ -62,7 +62,7 @@ def lambda_handler(event, context):
             if res.get("Item") is None:
                 logger.error(f"number: {num} was empty...")
             else:
-                result.append(res["Item"]["file_id"])
+                result.append(res["Item"])
 
     print("🍊")
     return proxy_response._200(result)
