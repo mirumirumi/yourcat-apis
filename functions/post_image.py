@@ -2,6 +2,7 @@ import os
 import img
 import json
 import boto3
+import twitter
 import proxy_response
 from decimal import Decimal
 from aws_lambda_powertools import Logger
@@ -65,6 +66,9 @@ def lambda_handler(event, context):
             return proxy_response._500()
         else:
             logger.info(res)
+
+        # Twitter bot
+        twitter.tweet(file)
 
     # delete file in this runtime
     os.remove("/tmp/" + key)

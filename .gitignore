@@ -1,6 +1,6 @@
 .aws-sam/
 *.code-workspace
-
+secret.py
 
 
 # Created by https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode
