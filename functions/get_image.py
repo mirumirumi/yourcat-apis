@@ -38,7 +38,7 @@ def lambda_handler(event, context):
         logger.info(images)
         
     # random pick
-    result = random.sample(images, SHOW_IMAGE_COUNT if 100 < len(images) else len(images))
+    result = random.sample(images, SHOW_IMAGE_COUNT if SHOW_IMAGE_COUNT < len(images) else len(images))
     logger.info(result)
 
     print("🍊")

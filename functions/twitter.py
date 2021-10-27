@@ -18,6 +18,7 @@ ACCESS_TOKEN_SECRET = secret.ACCESS_TOKEN_SECRET
 
 
 def tweet(file):
+    # https://github.com/geduldig/TwitterAPI
     api = TwitterAPI(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
     try:
