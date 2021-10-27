@@ -4,8 +4,8 @@ import re
 import json
 import base64
 import secret
+from TwitterAPI import TwitterAPI
 from aws_lambda_powertools import Logger
-from requests_oauthlib import OAuth1Session
 
 # PowerTools
 logger = Logger()
@@ -15,31 +15,37 @@ CONSUMER_KEY = secret.CONSUMER_KEY
 CONSUMER_SECRET = secret.CONSUMER_SECRET
 ACCESS_TOKEN = secret.ACCESS_TOKEN
 ACCESS_TOKEN_SECRET = secret.ACCESS_TOKEN_SECRET
-ENDPOINT_UPLOAD = "https://upload.twitter.com/1.1/media/upload.json"
-ENDPOINT_TWEET = "https://api.twitter.com/1.1/statuses/update.json"
 
 
 def tweet(file):
-    session = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+    api = TwitterAPI(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
     try:
-        res = sesstion.post(ENDPOINT_UPLOAD, media=file)
-        media_id = res["media_id_string"]
+        res = api.request(
+            "media/upload",
+            None,
+            {"media": file}
+        )
+        media_id = res.json()["media_id"]
     except Exception as e:
         logger.exception(e)
+        return
     else:
         logger.info(res)
 
-    tweet_text = f"New Nyanko🐱 photo have been uploaded: \n{media_id}"
+    tweet_text = "New Nyanko🐱 photo have been uploaded: "
 
     try:
-        res = session.post(ENDPOINT_TWEET, params={
-            "status": tweet_text
-        })
+        res = api.request(
+            "statuses/update", {
+                "status": tweet_text,
+                "media_ids": media_id
+            }
+        )
     except Exception as e:
         logger.exception(e)
     else:
-        logger.info(res)
+        logger.info(res.text)
 
     return
 
