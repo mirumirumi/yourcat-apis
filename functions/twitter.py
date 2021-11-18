@@ -34,7 +34,7 @@ def tweet(file):
     else:
         logger.info(res)
 
-    tweet_text = "New Nyanko🐱 photo have been uploaded: "
+    tweet_text = "New Nyanko🐱 : "
 
     try:
         res = api.request(
