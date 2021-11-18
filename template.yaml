@@ -9,6 +9,12 @@ Globals:
   Function:
     MemorySize: 3333
     Timeout: 13
+    Layers:
+      - !Ref ImportModulesLayer
+      - !Ref UtilsLayer
+    Environment:
+      Variables:
+        API_ALLOW_ORIGIN: !Sub ${ApiAllowOrigin}
   Api:
     OpenApiVersion: 3.0.2  # 勝手にStageが作られる回避：https://is.gd/4gPtX6
 
@@ -22,6 +28,8 @@ Parameters:
     AllowedValues:
       - dev
       - prd
+  ApiAllowOrigin:
+    Type: String
 
 
 Resources:
@@ -65,8 +73,8 @@ Resources:
       # Auth:
       #   ApiKeyRequired: true
       Cors:
-        AllowOrigin: "'*'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token''"
+        AllowOrigin: !Sub "'${ApiAllowOrigin}'"
+        AllowHeaders: "'Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token'"
         AllowMethods: "'POST, OPTIONS'"
   ApiKey:
     Type: AWS::ApiGateway::ApiKey
@@ -114,9 +122,6 @@ Resources:
       Policies:
         - S3FullAccessPolicy:
             BucketName: !Ref ImageDataCacheBucket
-      Layers:
-        - !Ref ImportModulesLayer
-        - !Ref UtilsLayer
       Environment:
         Variables:
           Cache_S3_BUCKET_NAME: !Ref ImageDataCacheBucket
@@ -139,9 +144,6 @@ Resources:
       Runtime: python3.8
       Policies:
         - RekognitionDetectOnlyPolicy: {}
-      Layers:
-        - !Ref ImportModulesLayer
-        - !Ref UtilsLayer
       Events:
         RestApis:
           Type: Api
@@ -166,9 +168,6 @@ Resources:
             BucketName: !Ref ImageDataCacheBucket
         - DynamoDBCrudPolicy:
             TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
-      Layers:
-        - !Ref ImportModulesLayer
-        - !Ref UtilsLayer
       Environment:
         Variables:
           Image_S3_BUCKET_NAME: !Ref ImageS3Bucket

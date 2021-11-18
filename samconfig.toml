@@ -10,6 +10,7 @@ region = "ap-northeast-1"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
 parameter_overrides = """\
     EnvironmentName=\"dev\" \
+    ApiAllowOrigin=\"http://localhost:8080\" \
 """
 tags = "project=\"YourCat\" CloudFormation=\"true\""
 confirm_changeset = false
@@ -24,6 +25,7 @@ region = "ap-northeast-1"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
 parameter_overrides = """\
     EnvironmentName=\"prd\" \
+    ApiAllowOrigin=\"https://mirumi.me\" \
 """
 tags = "project=\"YourCat\" CloudFormation=\"true\""
 confirm_changeset = false
