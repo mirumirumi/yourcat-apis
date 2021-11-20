@@ -13,21 +13,27 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
       - uses: aws-actions/setup-sam@v1
-      - uses: aws-actions/configure-aws-credentials@v1
+
+      - name: dev login (no role)
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-region: ap-northeast-1
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: prd assume role
-        uses: aws-actions/configure-aws-credentials@v1
         if: ${{ github.ref == 'refs/heads/release/prd' }}
+        uses: aws-actions/configure-aws-credentials@v1
         with:
+          aws-region: ap-northeast-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: arn:aws:iam::262032477414:role/AdministratorRole
-      
+
       - name: gpg secret
         run: |
           gpg --batch --yes --passphrase ${{ secrets.GPG_PASSPHRASE }} --ignore-mdc-error functions/secret.py.gpg
-      
+
       - run: sam build --use-container
       - if: ${{ github.ref == 'refs/heads/main' }}
         run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env dev
