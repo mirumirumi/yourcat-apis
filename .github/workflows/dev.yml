@@ -17,10 +17,9 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       
-      # git-secret
+      # secret
       - run: |
-          sudo apt install git-secret
-          git secret reveal -p ${{ secrets.GIT_SECRET_PW }}
+          gpg --batch --yes --passphrase ${{ secrets.GPG_PASSPHRASE }} --ignore-mdc-error functions/secret.py.gpg
       
       - run: sam build --use-container
       - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env dev
