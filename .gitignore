@@ -1,4 +1,5 @@
 .aws-sam/
+/tests
 *.code-workspace
 secret.py
 
