@@ -29,4 +29,7 @@ jobs:
           gpg --batch --yes --passphrase ${{ secrets.GPG_PASSPHRASE }} --ignore-mdc-error functions/secret.py.gpg
       
       - run: sam build --use-container
-      - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env dev
+      - if: ${{ github.ref == 'refs/heads/main' }}
+        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env dev
+      - if: ${{ github.ref == 'refs/heads/release/prd' }}
+        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env prd
