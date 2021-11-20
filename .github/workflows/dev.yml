@@ -19,7 +19,7 @@ jobs:
       
       # secret
       - run: |
-          gpg --batch --yes --passphrase ${{ secrets.GIT_SECRET_PW }} functions/secret.py.gpg
+          gpg --batch --yes --passphrase ${{ secrets.GIT_SECRET_PW }} --ignore-mdc-error functions/secret.py.gpg
       
       - run: sam build --use-container
       - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env dev
