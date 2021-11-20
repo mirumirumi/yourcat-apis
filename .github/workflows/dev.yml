@@ -20,7 +20,7 @@ jobs:
       # git-secret
       - run: |
           sudo apt install git-secret
-          git secret reveal -p ${{ secrets.$GIT_SECRET_PW}}
+          git secret reveal -p ${{ secrets.GIT_SECRET_PW }}
       
       - run: sam build --use-container
       - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env dev
