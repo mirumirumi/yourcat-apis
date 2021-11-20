@@ -114,6 +114,8 @@ Resources:
 
   GetImageFunction:
     Type: AWS::Serverless::Function
+    DependsOn:
+     - ImageDataCacheBucket
     Properties:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-image
       CodeUri: functions/
@@ -156,6 +158,9 @@ Resources:
               ApiKeyRequired: true
   PostImageFunction:
     Type: AWS::Serverless::Function
+    DependsOn:
+     - ImageS3Bucket
+     - ImageDataCacheBucket
     Properties:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-post-image
       CodeUri: functions/
