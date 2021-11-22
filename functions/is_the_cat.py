@@ -12,6 +12,7 @@ logger = Logger()
 # Rekognition
 session = Session(region_name="ap-northeast-1")
 rekognition_client = session.client("rekognition")
+CONFIDENCE_THRESHOLD = 65.0
 
 
 @logger.inject_lambda_context()
@@ -52,7 +53,7 @@ def get_label_data(label_datas: dict, name: str) -> dict:
     result = {}
     for label in label_datas["Labels"]:
         if label["Name"] == name:
-            if 80.0 < label["Confidence"]:
+            if CONFIDENCE_THRESHOLD < label["Confidence"]:
                 result["judge"] = True
                 result["bounding_box"] = []
                 for bbs in label["Instances"]:
