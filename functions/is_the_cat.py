@@ -12,7 +12,7 @@ logger = Logger()
 # Rekognition
 session = Session(region_name="ap-northeast-1")
 rekognition_client = session.client("rekognition")
-CONFIDENCE_THRESHOLD = 65.0
+CONFIDENCE_THRESHOLD = 60.0
 
 
 @logger.inject_lambda_context()
