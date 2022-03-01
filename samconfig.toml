@@ -4,7 +4,7 @@ version = 0.1
 [dev.deploy]
 [dev.deploy.parameters]
 stack_name = "yourcat-dev"
-s3_bucket = "dev-sam-artifactstore"
+s3_bucket = "common-dev-sam-artifactstore"
 s3_prefix = "yourcat-dev"
 region = "ap-northeast-1"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
@@ -12,14 +12,14 @@ parameter_overrides = """\
     EnvironmentName=\"dev\" \
     ApiAllowOrigin=\"http://localhost:8080\" \
 """
-tags = "project=\"YourCat\" CloudFormation=\"true\""
+tags = "project=\"yourcat\" env=\"dev\" IaC=\"cfn\""
 confirm_changeset = false
 
 [prd]
 [prd.deploy]
 [prd.deploy.parameters]
 stack_name = "yourcat-prd"
-s3_bucket = "prd-sam-artifactstore"
+s3_bucket = "common-prd-sam-artifactstore"
 s3_prefix = "yourcat-prd"
 region = "ap-northeast-1"
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
@@ -27,5 +27,5 @@ parameter_overrides = """\
     EnvironmentName=\"prd\" \
     ApiAllowOrigin=\"https://mirumi.me\" \
 """
-tags = "project=\"YourCat\" CloudFormation=\"true\""
+tags = "project=\"yourcat\" env=\"prd\" IaC=\"cfn\""
 confirm_changeset = false
