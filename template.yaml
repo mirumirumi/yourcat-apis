@@ -1,9 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  your-cat
-
-  Sample SAM Template for your-cat
+Description: your-cat
 
 Globals:
   Function:
