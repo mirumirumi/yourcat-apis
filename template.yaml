@@ -1,9 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  your-cat
-
-  Sample SAM Template for your-cat
+Description: photo-cat
 
 Globals:
   Function:
@@ -22,7 +19,7 @@ Globals:
 Parameters:
   ResourcePrefix:
     Type: String
-    Default: yourcat
+    Default: photocat
   EnvironmentName:
     Type: String
     AllowedValues:
@@ -33,36 +30,36 @@ Parameters:
 
 
 Resources:
-  ImageS3Bucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
-      CorsConfiguration:
-        CorsRules:
-          - AllowedMethods:
-              - GET
-            AllowedOrigins:
-              - '*'
-  ImageS3BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref ImageS3Bucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Action:
-              - 's3:GetObject'
-            Effect: Allow
-            Resource: !Join
-              - ''
-              - - 'arn:aws:s3:::'
-                - !Ref ImageS3Bucket
-                - /*
-            Principal: '*'
-  ImageDataCacheBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-data-cache
+  # ImageS3Bucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     BucketName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+  #     CorsConfiguration:
+  #       CorsRules:
+  #         - AllowedMethods:
+  #             - GET
+  #           AllowedOrigins:
+  #             - '*'
+  # ImageS3BucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref ImageS3Bucket
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Action:
+  #             - 's3:GetObject'
+  #           Effect: Allow
+  #           Resource: !Join
+  #             - ''
+  #             - - 'arn:aws:s3:::'
+  #               - !Ref ImageS3Bucket
+  #               - /*
+  #           Principal: '*'
+  # ImageDataCacheBucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     BucketName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-data-cache
 
   RestApis:
     Type: AWS::Serverless::Api
@@ -76,41 +73,41 @@ Resources:
         AllowOrigin: !Sub "'${ApiAllowOrigin}'"
         AllowHeaders: "'Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token'"
         AllowMethods: "'POST, OPTIONS'"
-  ApiKey:
-    Type: AWS::ApiGateway::ApiKey
-    DependsOn:
-     - RestApis
-     - RestApisStage  # https://is.gd/CxvJeX
-    Properties:
-      Name: !Sub ${ResourcePrefix}-${EnvironmentName}-api-key
-      Enabled: true
-      StageKeys:
-        - RestApiId: !Ref RestApis
-          StageName:
-            !Sub ${ResourcePrefix}-${EnvironmentName}-apis
-  ApiUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    DependsOn:
-      - RestApis
-      - RestApisStage  # https://is.gd/CxvJeX
-    Properties:
-      ApiStages:
-        - ApiId: !Ref RestApis
-          Stage:
-            !Sub ${ResourcePrefix}-${EnvironmentName}-apis
-      Throttle:
-        BurstLimit: 2000
-        RateLimit: 1000
-      UsagePlanName: !Sub ${ResourcePrefix}-${EnvironmentName}-api-usage-plan
-  ApiUsagePlanKey:
-    Type: AWS::ApiGateway::UsagePlanKey
-    DependsOn:
-      - ApiKey
-      - ApiUsagePlan
-    Properties :
-      KeyId: !Ref ApiKey
-      KeyType: API_KEY
-      UsagePlanId: !Ref ApiUsagePlan
+  # ApiKey:
+  #   Type: AWS::ApiGateway::ApiKey
+  #   DependsOn:
+  #    - RestApis
+  #    - RestApisStage  # https://is.gd/CxvJeX
+  #   Properties:
+  #     Name: !Sub ${ResourcePrefix}-${EnvironmentName}-api-key
+  #     Enabled: true
+  #     StageKeys:
+  #       - RestApiId: !Ref RestApis
+  #         StageName:
+  #           !Sub ${ResourcePrefix}-${EnvironmentName}-apis
+  # ApiUsagePlan:
+  #   Type: AWS::ApiGateway::UsagePlan
+  #   DependsOn:
+  #     - RestApis
+  #     - RestApisStage  # https://is.gd/CxvJeX
+  #   Properties:
+  #     ApiStages:
+  #       - ApiId: !Ref RestApis
+  #         Stage:
+  #           !Sub ${ResourcePrefix}-${EnvironmentName}-apis
+  #     Throttle:
+  #       BurstLimit: 2000
+  #       RateLimit: 1000
+  #     UsagePlanName: !Sub ${ResourcePrefix}-${EnvironmentName}-api-usage-plan
+  # ApiUsagePlanKey:
+  #   Type: AWS::ApiGateway::UsagePlanKey
+  #   DependsOn:
+  #     - ApiKey
+  #     - ApiUsagePlan
+  #   Properties :
+  #     KeyId: !Ref ApiKey
+  #     KeyType: API_KEY
+  #     UsagePlanId: !Ref ApiUsagePlan
 
   GetImageFunction:
     Type: AWS::Serverless::Function
@@ -121,10 +118,10 @@ Resources:
       Runtime: python3.8
       Policies:
         - S3FullAccessPolicy:
-            BucketName: !Ref ImageDataCacheBucket
+            BucketName: !Sub yourcat-${EnvironmentName}-image-data-cache
       Environment:
         Variables:
-          Cache_S3_BUCKET_NAME: !Ref ImageDataCacheBucket
+          Cache_S3_BUCKET_NAME: !Sub yourcat-${EnvironmentName}-image-data-cache
       Events:
         RestApis:
           Type: Api
@@ -132,9 +129,9 @@ Resources:
             RestApiId: !Ref RestApis
             Path: /get-image
             Method: get
-            # GETだけにキー必須になるようにこっちで書く
-            Auth:
-              ApiKeyRequired: true
+            # # GETだけにキー必須になるようにこっちで書く
+            # Auth:
+            #   ApiKeyRequired: true
   IsTheCatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -151,9 +148,9 @@ Resources:
             RestApiId: !Ref RestApis
             Path: /is-the-cat
             Method: post
-            # POSTだけにキー必須になるようにこっちで書く
-            Auth:
-              ApiKeyRequired: true
+            # # POSTだけにキー必須になるようにこっちで書く
+            # Auth:
+            #   ApiKeyRequired: true
   PostImageFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -163,16 +160,16 @@ Resources:
       Runtime: python3.8
       Policies:
         - S3FullAccessPolicy:
-            BucketName: !Ref ImageS3Bucket
+            BucketName: !Sub yourcat-${EnvironmentName}-image
         - S3FullAccessPolicy:
-            BucketName: !Ref ImageDataCacheBucket
+            BucketName: !Sub yourcat-${EnvironmentName}-image-data-cache
         - DynamoDBCrudPolicy:
-            TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+            TableName: !Sub yourcat-${EnvironmentName}-image
       Environment:
         Variables:
-          Image_S3_BUCKET_NAME: !Ref ImageS3Bucket
-          Cache_S3_BUCKET_NAME: !Ref ImageDataCacheBucket
-          IMAGE_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+          Image_S3_BUCKET_NAME: !Sub yourcat-${EnvironmentName}-image
+          Cache_S3_BUCKET_NAME: !Sub yourcat-${EnvironmentName}-image-data-cache
+          IMAGE_TABLE_NAME: !Sub yourcat-${EnvironmentName}-image
       Events:
         RestApis:
           Type: Api
@@ -180,9 +177,9 @@ Resources:
             RestApiId: !Ref RestApis
             Path: /post-image
             Method: post
-            # POSTだけにキー必須になるようにこっちで書く
-            Auth:
-              ApiKeyRequired: true
+            # # POSTだけにキー必須になるようにこっちで書く
+            # Auth:
+            #   ApiKeyRequired: true
 
   ImportModulesLayer:
     Type: AWS::Serverless::LayerVersion
@@ -203,163 +200,14 @@ Resources:
     Metadata:
       BuildMethod: python3.8
 
-  ImageDataDynamoDBTable:
-    Type: AWS::DynamoDB::Table
-    Properties: 
-      TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
-      KeySchema: 
-        - AttributeName: file_id
-          KeyType: HASH
-      AttributeDefinitions:
-        - AttributeName: file_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST 
-      # ProvisionedThroughput: 
-      #   ReadCapacityUnits: 5
-      #   WriteCapacityUnits: 5
-  # ImageCountDynamoDBTable:
+  # ImageDataDynamoDBTable:
   #   Type: AWS::DynamoDB::Table
   #   Properties: 
-  #     TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
+  #     TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
   #     KeySchema: 
-  #       - AttributeName: type
+  #       - AttributeName: file_id
   #         KeyType: HASH
-  #     AttributeDefinitions: 
-  #       - AttributeName: type
+  #     AttributeDefinitions:
+  #       - AttributeName: file_id
   #         AttributeType: S
-  #     BillingMode: PROVISIONED
-  #     ProvisionedThroughput: 
-  #       ReadCapacityUnits: 5
-  #       WriteCapacityUnits: 5
-
-  # ImageDataRCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageDataDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 1
-  #     MaxCapacity: 30
-  #     ResourceId: !Join ["", ["table/", !Ref ImageDataDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:ReadCapacityUnits
-  #     ServiceNamespace: dynamodb
-  # ImageDataWCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageDataDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 10
-  #     MaxCapacity: 40
-  #     ResourceId: !Join ["", ["table/", !Ref ImageDataDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:WriteCapacityUnits
-  #     ServiceNamespace: dynamodb
-  # ImageCountRCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageCountDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 1
-  #     MaxCapacity: 30
-  #     ResourceId: !Join ["", ["table/", !Ref ImageCountDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:ReadCapacityUnits
-  #     ServiceNamespace: dynamodb
-  # ImageCountWCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageCountDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 1
-  #     MaxCapacity: 30
-  #     ResourceId: !Join ["", ["table/", !Ref ImageCountDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:WriteCapacityUnits
-  #     ServiceNamespace: dynamodb
-
-  # ImageDataReadScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-data-read-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageDataRCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBReadCapacityUtilization
-  # ImageDataWriteScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-data-write-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageDataWCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBWriteCapacityUtilization
-  # ImageCountReadScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-count-read-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageCountRCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBReadCapacityUtilization
-  # ImageCountWriteScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-count-write-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageCountWCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBWriteCapacityUtilization
-
-  # AutoScalingRole: 
-  #   Type: AWS::IAM::Role
-  #   Properties: 
-  #     AssumeRolePolicyDocument: 
-  #       Version: "2012-10-17"
-  #       Statement: 
-  #         - Effect: Allow
-  #           Principal: 
-  #             Service: 
-  #               - application-autoscaling.amazonaws.com
-  #           Action: 
-  #             - sts:AssumeRole
-  #     Path: "/"
-  #     Policies: 
-  #       - PolicyName: autoscaling-role-policy
-  #         PolicyDocument:
-  #           Version: "2012-10-17"
-  #           Statement: 
-  #             - Effect: Allow
-  #               Action:          
-  #                 - "dynamodb:DescribeTable"
-  #                 - "dynamodb:UpdateTable"
-  #                 - "cloudwatch:PutMetricAlarm"
-  #                 - "cloudwatch:DescribeAlarms"
-  #                 - "cloudwatch:GetMetricStatistics"
-  #                 - "cloudwatch:SetAlarmState"
-  #                 - "cloudwatch:DeleteAlarms"
-  #               Resource: "*"
-
-
-# Outputs:
-
-
+  #     BillingMode: PAY_PER_REQUEST 
