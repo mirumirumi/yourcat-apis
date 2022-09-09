@@ -1,5 +1,0 @@
-aws_lambda_powertools
-Pillow
-requests
-requests-oauthlib
-TwitterAPI
