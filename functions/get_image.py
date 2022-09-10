@@ -13,7 +13,7 @@ logger = Logger()
 
 # S3
 s3 = boto3.resource("s3")
-cache_bucket_name = os.getenv("Cache_S3_BUCKET_NAME")
+cache_bucket_name = os.getenv("CACHE_BUCKET_NAME")
 key = "scanned_data.json"
 obj = s3.Object(cache_bucket_name, key)
 

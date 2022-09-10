@@ -13,8 +13,8 @@ logger = Logger()
 
 # S3
 s3 = boto3.resource("s3")
-image_bucket_name = os.getenv("Image_S3_BUCKET_NAME")
-cache_bucket_name = os.getenv("Cache_S3_BUCKET_NAME")
+image_bucket_name = os.getenv("IMAGE_BUCKET_NAME")
+cache_bucket_name = os.getenv("CACHE_BUCKET_NAME")
 
 # DynamoDB
 IMAGE_TABLE_NAME = os.getenv("IMAGE_TABLE_NAME")
