@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import Any, cast, Literal, TypedDict
 
 import os
-import img
 import json
+import uuid
 import boto3
 import twitter
 from utils import *
@@ -28,7 +28,16 @@ def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyRespon
     body = json.loads(event["body"])
     logger.info(body)
 
-    key = img.to_jpg(body["image_data"]["base64"])
+    key = str(uuid.uuid4())
+    ext = "jpg"
+
+    save_img_into_lambda(
+        input_b64=body["image_data"]["base64"],
+        file_name=key,
+        want_ext=ext,
+    )
+
+    key = key + "." + ext
     obj = s3.Object(image_bucket_name, key)
 
     # write image data

@@ -2,10 +2,11 @@ from __future__ import annotations
 from typing import Any, cast, Literal, TypedDict
 
 import os
-import img
 import json
-from boto3 import Session
+import uuid
+from utils import *
 from proxy_response import *
+from boto3 import Session
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from mypy_boto3_rekognition.type_defs import DetectLabelsResponseTypeDef
@@ -23,10 +24,19 @@ def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyRespon
     body = json.loads(event["body"])
     logger.info(body)
 
-    key = img.to_jpg(body["image_data"]["base64"])
+    key = str(uuid.uuid4())
+    ext = "jpg"
+
+    save_img_into_lambda(
+        input_b64=body["image_data"]["base64"],
+        file_name=key,
+        want_ext=ext,
+    )
+
+    file_name = key + "." + ext
 
     # rekognition
-    with open("/tmp/" + key, mode="rb") as f:
+    with open("/tmp/" + file_name, mode="rb") as f:
         file = f.read()
         try:
             res = rekognition_client.detect_labels(Image={
@@ -39,7 +49,7 @@ def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyRespon
             logger.debug(res)
 
     # delete file in this runtime
-    os.remove("/tmp/" + key)
+    os.remove("/tmp/" + file_name)
 
     result = {
         "cat": get_label_data(res, "Cat"),

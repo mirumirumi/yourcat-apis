@@ -1,4 +1,3 @@
-Pillow
 requests
 requests-oauthlib
 TwitterAPI
