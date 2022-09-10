@@ -4,16 +4,14 @@ Description: your-cat
 
 Globals:
   Function:
-    MemorySize: 3333
-    Timeout: 13
+    MemorySize: 1111
+    Timeout: 11
     Layers:
       - !Ref ImportModulesLayer
       - !Ref UtilsLayer
     Environment:
       Variables:
         API_ALLOW_ORIGIN: !Sub ${ApiAllowOrigin}
-  Api:
-    OpenApiVersion: 3.0.2  # 勝手にStageが作られる回避：https://is.gd/4gPtX6
 
 
 Parameters:
@@ -66,48 +64,10 @@ Resources:
     Properties:
       Name: !Sub ${ResourcePrefix}-${EnvironmentName}
       StageName: !Sub ${ResourcePrefix}-${EnvironmentName}-apis
-      # API側の定義でキー必須にする(Auth:を記述)とOPTIONSで引っかかるので不記載
-      # Auth:
-      #   ApiKeyRequired: true
       Cors:
         AllowOrigin: !Sub "'${ApiAllowOrigin}'"
         AllowHeaders: "'Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token'"
         AllowMethods: "'POST, OPTIONS'"
-  ApiKey:
-    Type: AWS::ApiGateway::ApiKey
-    DependsOn:
-     - RestApis
-     - RestApisStage  # https://is.gd/CxvJeX
-    Properties:
-      Name: !Sub ${ResourcePrefix}-${EnvironmentName}-api-key
-      Enabled: true
-      StageKeys:
-        - RestApiId: !Ref RestApis
-          StageName:
-            !Sub ${ResourcePrefix}-${EnvironmentName}-apis
-  ApiUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    DependsOn:
-      - RestApis
-      - RestApisStage  # https://is.gd/CxvJeX
-    Properties:
-      ApiStages:
-        - ApiId: !Ref RestApis
-          Stage:
-            !Sub ${ResourcePrefix}-${EnvironmentName}-apis
-      Throttle:
-        BurstLimit: 2000
-        RateLimit: 1000
-      UsagePlanName: !Sub ${ResourcePrefix}-${EnvironmentName}-api-usage-plan
-  ApiUsagePlanKey:
-    Type: AWS::ApiGateway::UsagePlanKey
-    DependsOn:
-      - ApiKey
-      - ApiUsagePlan
-    Properties :
-      KeyId: !Ref ApiKey
-      KeyType: API_KEY
-      UsagePlanId: !Ref ApiUsagePlan
 
   GetImageFunction:
     Type: AWS::Serverless::Function
@@ -121,7 +81,7 @@ Resources:
             BucketName: !Ref ImageDataCacheBucket
       Environment:
         Variables:
-          Cache_S3_BUCKET_NAME: !Ref ImageDataCacheBucket
+          CACHE_BUCKET_NAME: !Ref ImageDataCacheBucket
       Events:
         RestApis:
           Type: Api
@@ -129,9 +89,6 @@ Resources:
             RestApiId: !Ref RestApis
             Path: /get-image
             Method: get
-            # GETだけにキー必須になるようにこっちで書く
-            Auth:
-              ApiKeyRequired: true
   IsTheCatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -148,9 +105,6 @@ Resources:
             RestApiId: !Ref RestApis
             Path: /is-the-cat
             Method: post
-            # POSTだけにキー必須になるようにこっちで書く
-            Auth:
-              ApiKeyRequired: true
   PostImageFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -167,8 +121,8 @@ Resources:
             TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
       Environment:
         Variables:
-          Image_S3_BUCKET_NAME: !Ref ImageS3Bucket
-          Cache_S3_BUCKET_NAME: !Ref ImageDataCacheBucket
+          IMAGE_BUCKET_NAME: !Ref ImageS3Bucket
+          CACHE_BUCKET_NAME: !Ref ImageDataCacheBucket
           IMAGE_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image
       Events:
         RestApis:
@@ -177,9 +131,6 @@ Resources:
             RestApiId: !Ref RestApis
             Path: /post-image
             Method: post
-            # POSTだけにキー必須になるようにこっちで書く
-            Auth:
-              ApiKeyRequired: true
 
   ImportModulesLayer:
     Type: AWS::Serverless::LayerVersion
@@ -355,8 +306,3 @@ Resources:
   #                 - "cloudwatch:SetAlarmState"
   #                 - "cloudwatch:DeleteAlarms"
   #               Resource: "*"
-
-
-# Outputs:
-
-
