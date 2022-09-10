@@ -1,0 +1,1 @@
+Pillow == 9.2.0  # for Python 3.9
