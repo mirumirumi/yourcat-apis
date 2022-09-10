@@ -1,19 +1,20 @@
+from __future__ import annotations
+from typing import Any, cast, Literal, TypedDict
+
 import os
 import io
 import re
-import json
 import uuid
 import base64
 from PIL import Image
-from aws_lambda_powertools import Logger
+from aws_lambda_powertools.logging import Logger
 
-# PowerTools
 logger = Logger()
 
 
-def to_jpg(event: dict) -> str:
+def to_jpg(input_b64: str) -> str:
     # base64 to bytes
-    temp = re.sub("data:image\/.*?;base64,", "", event)
+    temp = re.sub("data:image\/.*?;base64,", "", input_b64)
     temp = temp.encode("ascii")
     byte = base64.b64decode(temp)
     logger.info(byte)
@@ -29,5 +30,3 @@ def to_jpg(event: dict) -> str:
     image.save(temp_path, format="jpeg")
 
     return key
-
-

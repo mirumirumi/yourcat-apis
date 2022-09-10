@@ -7,11 +7,11 @@ Globals:
     MemorySize: 1111
     Timeout: 11
     Layers:
-      - !Ref ImportModulesLayer
+      - !Ref PowerToolsLayer
       - !Ref UtilsLayer
     Environment:
       Variables:
-        API_ALLOW_ORIGIN: !Sub ${ApiAllowOrigin}
+        ALLOWED_CLIENT_ORIGIN: !Sub ${ApiAllowOrigin}
 
 
 Parameters:
@@ -73,8 +73,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-image
-      CodeUri: functions/
-      Handler: get_image.lambda_handler
+      CodeUri: functions/get_image
+      Handler: app.lambda_handler
       Runtime: python3.8
       Policies:
         - S3FullAccessPolicy:
@@ -93,8 +93,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-is-the-cat
-      CodeUri: functions/
-      Handler: is_the_cat.lambda_handler
+      CodeUri: functions/is_the_cat/
+      Handler: app.lambda_handler
       Runtime: python3.8
       Policies:
         - RekognitionDetectOnlyPolicy: {}
@@ -109,8 +109,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-post-image
-      CodeUri: functions/
-      Handler: post_image.lambda_handler
+      CodeUri: functions/post_image/
+      Handler: app.lambda_handler
       Runtime: python3.8
       Policies:
         - S3FullAccessPolicy:
@@ -132,24 +132,26 @@ Resources:
             Path: /post-image
             Method: post
 
-  ImportModulesLayer:
+  PowerToolsLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      Description: import modules containing PowerTools
-      ContentUri: "import_modules_layer/"
+      Description: included AWS Lambda PowerTools
+      ContentUri: "layers/powertools_layer/"
       CompatibleRuntimes:
         - python3.8
+        - python3.9
     Metadata:
-      BuildMethod: python3.8
+      BuildMethod: python3.9
   UtilsLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
       Description: utils
-      ContentUri: "utils_layer/"
+      ContentUri: "layers/utils_layer/"
       CompatibleRuntimes:
         - python3.8
+        - python3.9
     Metadata:
-      BuildMethod: python3.8
+      BuildMethod: python3.9
 
   ImageDataDynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -165,20 +167,6 @@ Resources:
       # ProvisionedThroughput: 
       #   ReadCapacityUnits: 5
       #   WriteCapacityUnits: 5
-  # ImageCountDynamoDBTable:
-  #   Type: AWS::DynamoDB::Table
-  #   Properties: 
-  #     TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image-count
-  #     KeySchema: 
-  #       - AttributeName: type
-  #         KeyType: HASH
-  #     AttributeDefinitions: 
-  #       - AttributeName: type
-  #         AttributeType: S
-  #     BillingMode: PROVISIONED
-  #     ProvisionedThroughput: 
-  #       ReadCapacityUnits: 5
-  #       WriteCapacityUnits: 5
 
   # ImageDataRCUScalableTarget:
   #   Type: AWS::ApplicationAutoScaling::ScalableTarget
@@ -199,28 +187,6 @@ Resources:
   #     MinCapacity: 10
   #     MaxCapacity: 40
   #     ResourceId: !Join ["", ["table/", !Ref ImageDataDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:WriteCapacityUnits
-  #     ServiceNamespace: dynamodb
-  # ImageCountRCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageCountDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 1
-  #     MaxCapacity: 30
-  #     ResourceId: !Join ["", ["table/", !Ref ImageCountDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:ReadCapacityUnits
-  #     ServiceNamespace: dynamodb
-  # ImageCountWCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageCountDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 1
-  #     MaxCapacity: 30
-  #     ResourceId: !Join ["", ["table/", !Ref ImageCountDynamoDBTable]]
   #     RoleARN: !GetAtt AutoScalingRole.Arn
   #     ScalableDimension: dynamodb:table:WriteCapacityUnits
   #     ServiceNamespace: dynamodb
@@ -245,32 +211,6 @@ Resources:
   #     PolicyType: TargetTrackingScaling
   #     ScalingTargetId: 
   #       Ref: ImageDataWCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBWriteCapacityUtilization
-  # ImageCountReadScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-count-read-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageCountRCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBReadCapacityUtilization
-  # ImageCountWriteScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-count-write-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageCountWCUScalableTarget
   #     TargetTrackingScalingPolicyConfiguration: 
   #       TargetValue: 70
   #       ScaleInCooldown: 60

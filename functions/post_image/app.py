@@ -1,32 +1,30 @@
+from __future__ import annotations
+from typing import Any, cast, Literal, TypedDict
+
 import os
 import img
 import json
 import boto3
 import twitter
-import proxy_response
-from decimal import Decimal
-from aws_lambda_powertools import Logger
+from utils import *
+from proxy_response import *
 from datetime import datetime, timezone, timedelta
+from aws_lambda_powertools.logging import Logger
+from aws_lambda_powertools.utilities.typing import LambdaContext
 
-# PowerTools
 logger = Logger()
 
-# S3
 s3 = boto3.resource("s3")
-image_bucket_name = os.getenv("IMAGE_BUCKET_NAME")
-cache_bucket_name = os.getenv("CACHE_BUCKET_NAME")
+image_bucket_name = os.environ["IMAGE_BUCKET_NAME"]
+cache_bucket_name = os.environ["CACHE_BUCKET_NAME"]
 
-# DynamoDB
-IMAGE_TABLE_NAME = os.getenv("IMAGE_TABLE_NAME")
-image_table = boto3.resource("dynamodb").Table(IMAGE_TABLE_NAME)
+image_table = boto3.resource("dynamodb").Table(os.environ["IMAGE_TABLE_NAME"])
 
-# timezone
 JST = timezone(timedelta(hours=+9), "JST")
 
 
-@logger.inject_lambda_context()
-def lambda_handler(event, context):
-    print("🍊")
+@logger.inject_lambda_context
+def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyResponse:
     body = json.loads(event["body"])
     logger.info(body)
 
@@ -40,20 +38,17 @@ def lambda_handler(event, context):
     height = body["image_data"]["height"]
     try:
         res = image_table.put_item(Item={
-            # "increment_num": image_count + 1,
             "file_id": file_id,
             "extension": ext,
             "size": {
                 "width": width,
-                "height": height
+                "height": height,
             },
-            "timestamp": now
+            "timestamp": now,
         })
     except Exception as e:
         logger.exception(e)
-        return proxy_response._500()
-    else:
-        logger.info(res)
+        return s500()
 
     # file save to S3
     with open("/tmp/" + key, mode="rb") as f:
@@ -63,9 +58,7 @@ def lambda_handler(event, context):
             res = obj.put(Body=file, ContentType="image/jpeg", CacheControl="no-store")
         except Exception as e:
             logger.exception(e)
-            return proxy_response._500()
-        else:
-            logger.info(res)
+            return s500()
 
         # Twitter bot
         twitter.tweet(file)
@@ -77,47 +70,28 @@ def lambda_handler(event, context):
     try:
         res = image_table.scan()
         items = res["Items"]
-        item_count = res["Count"]
     except Exception as e:
         logger.exception(e)
+        return s500()
     else:
-        logger.info(res)
+        logger.debug(res)
 
     # put scan file to s3
     key_scanned_data = "scanned_data.json"
     obj_scanned_data = s3.Object(cache_bucket_name, key_scanned_data)
     try:
-        res = obj_scanned_data.put(Body=json.dumps(items, default=decimal_to_float), ContentType="application/json")
+        res = obj_scanned_data.put(
+            Body=json.dumps(items, default=decimal_to_float),
+            ContentType="application/json",
+        )
     except Exception as e:
         logger.exception(e)
-    else:
-        logger.info(res)
+        return s500()
 
-    print("🍊")
-    return proxy_response._200({
+    return s200({
         "file_id": key,
         "size": {
             "width": width,
-            "height": height
-        }
+            "height": height,
+        },
     })
-
-
-def put_initial():
-    try:
-        res = image_count_table.put_item(Item={
-            "type": "count",
-            "count": 0
-        })
-    except Exception as e:
-        logger.exception(e)
-    else:
-        logger.info(res)
-
-
-def decimal_to_float(obj):
-    if isinstance(obj, Decimal):
-        return float(obj)
-    raise TypeError
-
-

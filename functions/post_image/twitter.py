@@ -1,11 +1,9 @@
-import os
-import io
-import re
-import json
-import base64
+from __future__ import annotations
+from typing import Any, cast, Literal, TypedDict
+
 import secret
 from TwitterAPI import TwitterAPI
-from aws_lambda_powertools import Logger
+from aws_lambda_powertools.logging import Logger
 
 # PowerTools
 logger = Logger()
@@ -17,7 +15,7 @@ ACCESS_TOKEN = secret.ACCESS_TOKEN
 ACCESS_TOKEN_SECRET = secret.ACCESS_TOKEN_SECRET
 
 
-def tweet(file):
+def tweet(file: bytes):
     # https://github.com/geduldig/TwitterAPI
     api = TwitterAPI(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
@@ -25,14 +23,12 @@ def tweet(file):
         res = api.request(
             "media/upload",
             None,
-            {"media": file}
+            {"media": file},
         )
-        media_id = res.json()["media_id"]
+        media_id: str = res.json()["media_id"]
     except Exception as e:
         logger.exception(e)
         return
-    else:
-        logger.info(res)
 
     tweet_text = "New Nyanko🐱 : "
 
@@ -40,13 +36,13 @@ def tweet(file):
         res = api.request(
             "statuses/update", {
                 "status": tweet_text,
-                "media_ids": media_id
+                "media_ids": media_id,
             }
         )
     except Exception as e:
         logger.exception(e)
     else:
-        logger.info(res.text)
+        logger.debug(cast(str, res.text))
 
     return
 

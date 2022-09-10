@@ -1,0 +1,2 @@
+Pillow
+mypy_boto3_rekognition
