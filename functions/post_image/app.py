@@ -53,7 +53,6 @@ def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyRespon
     # file save to S3
     with open("/tmp/" + key, mode="rb") as f:
         file = f.read()
-        logger.info(file)
         try:
             res = obj.put(Body=file, ContentType="image/jpeg", CacheControl="no-store")
         except Exception as e:

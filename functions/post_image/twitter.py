@@ -5,10 +5,8 @@ import secret
 from TwitterAPI import TwitterAPI
 from aws_lambda_powertools.logging import Logger
 
-# PowerTools
 logger = Logger()
 
-# Twitter API
 CONSUMER_KEY = secret.CONSUMER_KEY
 CONSUMER_SECRET = secret.CONSUMER_SECRET
 ACCESS_TOKEN = secret.ACCESS_TOKEN
