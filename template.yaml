@@ -75,7 +75,7 @@ Resources:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-image
       CodeUri: functions/get_image
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       Policies:
         - S3FullAccessPolicy:
             BucketName: !Ref ImageDataCacheBucket
@@ -95,7 +95,7 @@ Resources:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-is-the-cat
       CodeUri: functions/is_the_cat/
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       Policies:
         - RekognitionDetectOnlyPolicy: {}
       Events:
@@ -111,7 +111,7 @@ Resources:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-post-image
       CodeUri: functions/post_image/
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       Policies:
         - S3FullAccessPolicy:
             BucketName: !Ref ImageS3Bucket
