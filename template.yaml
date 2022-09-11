@@ -130,6 +130,7 @@ Resources:
           IMAGE_BUCKET_NAME: !Ref ImageS3Bucket
           CACHE_BUCKET_NAME: !Ref ImageDataCacheBucket
           IMAGE_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+          ENV_NAME: !Sub ${EnvironmentName}
       Events:
         RestApis:
           Type: Api
