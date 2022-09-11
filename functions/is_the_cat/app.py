@@ -7,6 +7,7 @@ import uuid
 from utils import *
 from proxy_response import *
 from boto3 import Session
+from aws_lambda_typing import events
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from mypy_boto3_rekognition.type_defs import DetectLabelsResponseTypeDef
@@ -19,8 +20,8 @@ rekognition_client = session.client("rekognition")
 CONFIDENCE_THRESHOLD = 60.0
 
 
-@logger.inject_lambda_context
-def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyResponse:
+@logger.inject_lambda_context  # type: ignore
+def lambda_handler(event: events.APIGatewayProxyEventV1, context: LambdaContext) -> ProxyResponse:
     body = json.loads(event["body"])
     logger.info(body)
 

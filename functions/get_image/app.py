@@ -6,6 +6,7 @@ import json
 import boto3
 import random
 from proxy_response import *
+from aws_lambda_typing import events
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
@@ -19,9 +20,9 @@ obj = s3.Object(cache_bucket_name, key)
 SHOW_IMAGE_COUNT = 100
 
 
-@logger.inject_lambda_context
-def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyResponse:
-    logger.info(event)
+@logger.inject_lambda_context  # type: ignore
+def lambda_handler(event: events.APIGatewayProxyEventV1, context: LambdaContext) -> ProxyResponse:
+    logger.debug(event)
 
     try:
         res = obj.get()
@@ -35,6 +36,6 @@ def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyRespon
         
     # random pick
     result = random.sample(images, SHOW_IMAGE_COUNT if SHOW_IMAGE_COUNT < len(images) else len(images))
-    logger.debug(result)
+    logger.info(result)
 
     return s200(result)

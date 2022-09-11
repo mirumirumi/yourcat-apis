@@ -9,6 +9,7 @@ import twitter
 from utils import *
 from proxy_response import *
 from datetime import datetime, timezone, timedelta
+from aws_lambda_typing import events
 from aws_lambda_powertools.logging import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
@@ -23,11 +24,11 @@ image_table = boto3.resource("dynamodb").Table(os.environ["IMAGE_TABLE_NAME"])
 JST = timezone(timedelta(hours=+9), "JST")
 
 
-@logger.inject_lambda_context
-def lambda_handler(event: dict[str, Any], context: LambdaContext) -> ProxyResponse:
-    body = json.loads(event["body"])
-    logger.info(body)
+@logger.inject_lambda_context  # type: ignore
+def lambda_handler(event: events.APIGatewayProxyEventV1, context: LambdaContext) -> ProxyResponse:
+    logger.debug(event)
 
+    body = json.loads(event["body"])
     key = str(uuid.uuid4())
     ext = "jpg"
 
