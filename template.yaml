@@ -2,17 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: your-cat
 
-Globals:
-  Function:
-    MemorySize: 1111
-    Timeout: 11
-    Layers:
-      - !Ref PowerToolsLayer
-      - !Ref UtilsLayer
-    Environment:
-      Variables:
-        ALLOWED_CLIENT_ORIGIN: !Sub ${ApiAllowOrigin}
-
 
 Parameters:
   ResourcePrefix:
@@ -25,6 +14,23 @@ Parameters:
       - prd
   ApiAllowOrigin:
     Type: String
+
+
+Conditions:
+  IsPrd: !Equals [!Ref EnvironmentName, prd]
+
+
+Globals:
+  Function:
+    MemorySize: 1111
+    Timeout: 11
+    Layers:
+      - !Ref PowerToolsLayer
+      - !Ref UtilsLayer
+    Environment:
+      Variables:
+        LOG_LEVEL: !If [IsPrd, INFO, DEBUG]
+        ALLOWED_CLIENT_ORIGIN: !Sub ${ApiAllowOrigin}
 
 
 Resources:
