@@ -18,7 +18,7 @@ ACCESS_TOKEN_SECRET = secret.ACCESS_TOKEN_SECRET
 
 def tweet(file: bytes) -> None:
     if ENV != "prd":
-        logger.info("function was exited without tweeting because this is not prd env")
+        logger.debug("function was exited without tweeting because this is not prd env")
         return
 
     # https://github.com/geduldig/TwitterAPI
