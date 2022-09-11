@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, NoReturn
+from typing import Literal, Optional, NoReturn
 
 
 from decimal import Decimal
@@ -18,7 +18,7 @@ def save_img_into_lambda(
     input_b64: str,
     file_name: str,
     want_ext: Literal["jpg", "png"],
-    size: tuple[int, int] | None = None,
+    size: Optional[tuple[int, int]] = None,
 ) -> None:
     regexp = re.compile(r"data:image/(.*?);base64,")
 
