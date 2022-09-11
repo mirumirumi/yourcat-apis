@@ -1,11 +1,12 @@
 from __future__ import annotations
 from typing import Literal, Optional, NoReturn
 
-
 from decimal import Decimal
 
+
 def decimal_to_float(obj: object) -> float | NoReturn:
-    if isinstance(obj, Decimal): return float(obj)
+    if isinstance(obj, Decimal):
+        return float(obj)
     raise TypeError
 
 
@@ -13,6 +14,7 @@ import io
 import re
 import base64
 from PIL import Image
+
 
 def save_img_into_lambda(
     input_b64: str,

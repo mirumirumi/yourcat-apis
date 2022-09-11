@@ -38,12 +38,10 @@ def tweet(file: bytes) -> None:
     tweet_text = "New Nyanko🐱 : "
 
     try:
-        res = api.request(
-            "statuses/update", {
-                "status": tweet_text,
-                "media_ids": media_id,
-            }
-        )
+        res = api.request("statuses/update", {
+            "status": tweet_text,
+            "media_ids": media_id,
+        })
     except Exception as e:
         logger.exception(e)
     else:

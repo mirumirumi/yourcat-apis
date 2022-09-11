@@ -33,7 +33,7 @@ def lambda_handler(event: events.APIGatewayProxyEventV1, context: LambdaContext)
     else:
         images = json.loads(images)
         logger.debug(images)
-        
+
     # random pick
     result = random.sample(images, SHOW_IMAGE_COUNT if SHOW_IMAGE_COUNT < len(images) else len(images))
     logger.info(result)
