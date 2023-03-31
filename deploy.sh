@@ -1,2 +1,2 @@
-sam build --use-container
+yes | sam build --beta-features
 sam deploy --config-env dev

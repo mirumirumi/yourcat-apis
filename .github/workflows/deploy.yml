@@ -14,21 +14,25 @@ jobs:
       - uses: actions/setup-python@v2
       - uses: aws-actions/setup-sam@v1
 
-      - name: aws login
+      - name: Sign in to AWS
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-region: ap-northeast-1
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: gpg secret
+      - name: Decrypt secrets
         run: |
           gpg --batch --yes --passphrase ${{ secrets.GPG_PASSPHRASE }} --ignore-mdc-error functions/post_image/secret.py.gpg
 
-      - run: sam build --use-container
+      - name: Build
+        run: |
+          yes | sam build --beta-features
 
-      - if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Deploy (dev)
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env dev
 
-      - if: ${{ github.ref == 'refs/heads/release/prd' }}
+      - name: Deploy (prd)
+        if: ${{ github.ref == 'refs/heads/release/prd' }}
         run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env prd

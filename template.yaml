@@ -22,15 +22,13 @@ Conditions:
 
 Globals:
   Function:
-    MemorySize: 1111
-    Timeout: 11
-    Layers:
-      - !Ref PowerToolsLayer
-      - !Ref UtilsLayer
+    MemorySize: 256
+    Timeout: 30
     Environment:
       Variables:
         LOG_LEVEL: !If [IsPrd, INFO, DEBUG]
-        ALLOWED_CLIENT_ORIGIN: !Sub ${ApiAllowOrigin}
+        ENV_NAME: !Sub ${EnvironmentName}
+        API_ALLOW_ORIGIN: !Sub ${ApiAllowOrigin}
 
 
 Resources:
@@ -77,11 +75,15 @@ Resources:
 
   GetImageFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
+      BuildProperties:
+        Binary: get_image
     Properties:
       FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-image
-      CodeUri: functions/get_image
-      Handler: app.lambda_handler
-      Runtime: python3.9
+      CodeUri: "."
+      Handler: bootstrap
+      Runtime: provided.al2
       Policies:
         - S3FullAccessPolicy:
             BucketName: !Ref ImageDataCacheBucket
@@ -94,14 +96,18 @@ Resources:
           Properties:
             RestApiId: !Ref RestApis
             Path: /get-image
-            Method: get
-  IsTheCatFunction:
+            Method: GET
+  GetIsCatFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
+      BuildProperties:
+        Binary: get_is_cat
     Properties:
-      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-is-the-cat
-      CodeUri: functions/is_the_cat/
-      Handler: app.lambda_handler
-      Runtime: python3.9
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-is-cat
+      CodeUri: "."
+      Handler: bootstrap
+      Runtime: provided.al2
       Policies:
         - RekognitionDetectOnlyPolicy: {}
       Events:
@@ -109,15 +115,19 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref RestApis
-            Path: /is-the-cat
-            Method: post
-  PostImageFunction:
+            Path: /get-is-cat
+            Method: GET
+  PostPhotoFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
+      BuildProperties:
+        Binary: post_photo
     Properties:
-      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-post-image
-      CodeUri: functions/post_image/
-      Handler: app.lambda_handler
-      Runtime: python3.9
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-post-photo
+      CodeUri: "."
+      Handler: bootstrap
+      Runtime: provided.al2
       Policies:
         - S3FullAccessPolicy:
             BucketName: !Ref ImageS3Bucket
@@ -130,35 +140,13 @@ Resources:
           IMAGE_BUCKET_NAME: !Ref ImageS3Bucket
           CACHE_BUCKET_NAME: !Ref ImageDataCacheBucket
           IMAGE_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image
-          ENV_NAME: !Sub ${EnvironmentName}
       Events:
         RestApis:
           Type: Api
           Properties:
             RestApiId: !Ref RestApis
-            Path: /post-image
-            Method: post
-
-  PowerToolsLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      Description: included AWS Lambda PowerTools
-      ContentUri: "layers/powertools_layer/"
-      CompatibleRuntimes:
-        - python3.8
-        - python3.9
-    Metadata:
-      BuildMethod: python3.9
-  UtilsLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      Description: utils
-      ContentUri: "layers/utils_layer/"
-      CompatibleRuntimes:
-        - python3.8
-        - python3.9
-    Metadata:
-      BuildMethod: python3.9
+            Path: /post-photo
+            Method: POST
 
   ImageDataDynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -171,85 +159,3 @@ Resources:
         - AttributeName: file_id
           AttributeType: S
       BillingMode: PAY_PER_REQUEST 
-      # ProvisionedThroughput: 
-      #   ReadCapacityUnits: 5
-      #   WriteCapacityUnits: 5
-
-  # ImageDataRCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageDataDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 1
-  #     MaxCapacity: 30
-  #     ResourceId: !Join ["", ["table/", !Ref ImageDataDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:ReadCapacityUnits
-  #     ServiceNamespace: dynamodb
-  # ImageDataWCUScalableTarget:
-  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
-  #   DependsOn:
-  #     - ImageDataDynamoDBTable
-  #   Properties: 
-  #     MinCapacity: 10
-  #     MaxCapacity: 40
-  #     ResourceId: !Join ["", ["table/", !Ref ImageDataDynamoDBTable]]
-  #     RoleARN: !GetAtt AutoScalingRole.Arn
-  #     ScalableDimension: dynamodb:table:WriteCapacityUnits
-  #     ServiceNamespace: dynamodb
-
-  # ImageDataReadScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-data-read-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageDataRCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBReadCapacityUtilization
-  # ImageDataWriteScalingPolicy: 
-  #   Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-  #   Properties: 
-  #     PolicyName: image-data-write-scaling-policy
-  #     PolicyType: TargetTrackingScaling
-  #     ScalingTargetId: 
-  #       Ref: ImageDataWCUScalableTarget
-  #     TargetTrackingScalingPolicyConfiguration: 
-  #       TargetValue: 70
-  #       ScaleInCooldown: 60
-  #       ScaleOutCooldown: 60
-  #       PredefinedMetricSpecification: 
-  #         PredefinedMetricType: DynamoDBWriteCapacityUtilization
-
-  # AutoScalingRole: 
-  #   Type: AWS::IAM::Role
-  #   Properties: 
-  #     AssumeRolePolicyDocument: 
-  #       Version: "2012-10-17"
-  #       Statement: 
-  #         - Effect: Allow
-  #           Principal: 
-  #             Service: 
-  #               - application-autoscaling.amazonaws.com
-  #           Action: 
-  #             - sts:AssumeRole
-  #     Path: "/"
-  #     Policies: 
-  #       - PolicyName: autoscaling-role-policy
-  #         PolicyDocument:
-  #           Version: "2012-10-17"
-  #           Statement: 
-  #             - Effect: Allow
-  #               Action:          
-  #                 - "dynamodb:DescribeTable"
-  #                 - "dynamodb:UpdateTable"
-  #                 - "cloudwatch:PutMetricAlarm"
-  #                 - "cloudwatch:DescribeAlarms"
-  #                 - "cloudwatch:GetMetricStatistics"
-  #                 - "cloudwatch:SetAlarmState"
-  #                 - "cloudwatch:DeleteAlarms"
-  #               Resource: "*"
