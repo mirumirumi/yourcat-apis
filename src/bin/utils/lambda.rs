@@ -56,7 +56,7 @@ where
         .service(service_fn(lambda_handler))
 }
 
-pub fn log_lambda_event(
+pub fn log_incoming_event(
     request: Request,
     context: Context,
     payload: Result<Option<String>, PayloadError>,

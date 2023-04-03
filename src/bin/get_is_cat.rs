@@ -6,18 +6,29 @@ use std::env;
 use thiserror::Error;
 use tracing::{debug, error, info};
 
-use yourcat::{init_app, log_lambda_event};
+mod utils {
+    pub mod lambda;
+    pub mod responses;
+}
+
+use utils::{lambda, responses::*};
+
+#[derive(Serialize)]
+struct Sample {
+    x: i32,
+}
 
 async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
     let context = request.lambda_context();
     let payload = request.payload::<String>();
 
-    log_lambda_event(request, context, payload);
+    lambda::log_incoming_event(request, context, payload);
 
-    Ok(Response::builder().status(200).body("/get-is-cat".into())?)
+    let sample = Sample { x: 3 };
+    _200(serde_json::to_string(&sample).unwrap())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(init_app(lambda_handler)).await
+    run(lambda::init_app(lambda_handler)).await
 }
