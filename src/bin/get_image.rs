@@ -3,8 +3,7 @@ use lambda_http::{run, Body, Error, Request, RequestExt, Response};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{env, str};
-// use thiserror::Error;
-// use tracing::{debug, error, info};
+use tracing::info;
 
 mod utils {
     pub mod lambda;
@@ -32,11 +31,9 @@ struct Size {
 
 async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
     let context = request.lambda_context();
-    let payload = request.payload::<String>();
+    lambda::log_incoming_event(&request, context);
 
-    lambda::log_incoming_event(request, context, payload);
-
-    // TODO: Use `struct` to define globally
+    // TODO: Use `struct` to define globally -> たぶん main に書けばいい！！！けどその場合は引数の取り回しが課題だね。実行時間で比較だな
     let config = aws_config::load_from_env().await;
     let s3 = aws_sdk_s3::Client::new(&config);
 
@@ -51,9 +48,9 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
         .await
         .expect("An error has occurred when calling `s3.get_object()` .");
 
-    let data = res.body.collect().await.unwrap().into_bytes();
-    let photos = str::from_utf8(&data).unwrap();
-    let photos: Vec<Photo> = serde_json::from_str(photos).unwrap();
+    let data = res.body.collect().await?.into_bytes();
+    let photos = str::from_utf8(&data)?;
+    let photos: Vec<Photo> = serde_json::from_str(photos)?;
 
     let mut rng = rand::thread_rng();
     let photos: Vec<&Photo> = photos
@@ -67,7 +64,10 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
         )
         .collect();
 
-    _200(serde_json::to_string(&photos).unwrap())
+    let result = serde_json::to_string(&photos)?;
+
+    info!(result);
+    _200(result)
 }
 
 #[tokio::main]

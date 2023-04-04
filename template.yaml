@@ -97,14 +97,14 @@ Resources:
             RestApiId: !Ref RestApis
             Path: /get-image
             Method: GET
-  GetIsCatFunction:
+  IsTheCatFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: rust-cargolambda
       BuildProperties:
-        Binary: get_is_cat
+        Binary: is_the_cat
     Properties:
-      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-is-cat
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-is-the-cat
       CodeUri: "."
       Handler: bootstrap
       Runtime: provided.al2
@@ -115,8 +115,8 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref RestApis
-            Path: /get-is-cat
-            Method: GET
+            Path: /is-the-cat
+            Method: post
   PostPhotoFunction:
     Type: AWS::Serverless::Function
     Metadata:
