@@ -126,11 +126,13 @@ pub fn log_incoming_event(request: &Request, context: Context) {
 }
 
 #[derive(PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Extension {
     JPG,
     PNG,
 }
 
+#[allow(dead_code)]
 pub fn save_image_in_temp(
     input_b64: &str,
     file_name: &str,
