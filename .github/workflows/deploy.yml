@@ -23,7 +23,7 @@ jobs:
 
       - name: Decrypt secrets
         run: |
-          gpg --batch --yes --passphrase ${{ secrets.GPG_PASSPHRASE }} --ignore-mdc-error functions/post_image/secret.py.gpg
+          echo "${{ secrets.GPG_PASSPHRASE }}" | sudo gpg --batch --passphrase-fd 0 --output "secret.py" --decrypt "twitter/secret.py.gpg"
 
       - name: Build
         run: |

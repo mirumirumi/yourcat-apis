@@ -22,7 +22,7 @@ Conditions:
 
 Globals:
   Function:
-    MemorySize: 256
+    MemorySize: 1024
     Timeout: 30
     Environment:
       Variables:
@@ -73,14 +73,14 @@ Resources:
         AllowHeaders: "'Content-Type, X-Amz-Date, Authorization, X-Api-Key, X-Amz-Security-Token'"
         AllowMethods: "'POST, OPTIONS'"
 
-  GetImageFunction:
+  GetPhotosFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: rust-cargolambda
       BuildProperties:
-        Binary: get_image
+        Binary: get_photos
     Properties:
-      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-image
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-get-photos
       CodeUri: "."
       Handler: bootstrap
       Runtime: provided.al2
@@ -135,18 +135,34 @@ Resources:
             BucketName: !Ref ImageDataCacheBucket
         - DynamoDBCrudPolicy:
             TableName: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+        - LambdaInvokePolicy:
+            FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-tweet
       Environment:
         Variables:
           IMAGE_BUCKET_NAME: !Ref ImageS3Bucket
           CACHE_BUCKET_NAME: !Ref ImageDataCacheBucket
           IMAGE_TABLE_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-image
+          INVOKE_LAMBDA_NAME: !Sub ${ResourcePrefix}-${EnvironmentName}-tweet
       Events:
         RestApis:
           Type: Api
           Properties:
             RestApiId: !Ref RestApis
-            Path: /post-photo
+            Path: /post-image
             Method: POST
+  TweetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ResourcePrefix}-${EnvironmentName}-tweet
+      CodeUri: twitter/
+      Handler: tweet.lambda_handler
+      Runtime: python3.9
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref ImageS3Bucket
+      Environment:
+        Variables:
+          IMAGE_BUCKET_NAME: !Ref ImageS3Bucket
 
   ImageDataDynamoDBTable:
     Type: AWS::DynamoDB::Table

@@ -85,7 +85,7 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
         None,
     )?;
 
-    let mut f = File::open(format!("/tmp/{}", file_name))
+    let mut file = File::open(format!("/tmp/{}", file_name))
         .await
         .expect("Failed to open the image file in `/tmp/`.");
 
@@ -93,7 +93,11 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
 
     let res = rekognition
         .detect_labels()
-        .image(Image::builder().bytes(file_to_blob(&mut f).await?).build())
+        .image(
+            Image::builder()
+                .bytes(file_to_blob(&mut file).await?)
+                .build(),
+        )
         .send()
         .await?;
 

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use lambda_http::{run, Body, Error, Request, RequestExt, Response};
+use lazy_static::lazy_static;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{env, str};
@@ -29,20 +30,23 @@ struct Size {
     height: f64,
 }
 
+lazy_static! {
+    static ref CACHE_BUCKET_NAME: String =
+        env::var("CACHE_BUCKET_NAME").expect("'CACHE_BUCKET_NAME' env var is not set.");
+}
+
 async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
     let context = request.lambda_context();
     lambda::log_incoming_event(&request, context);
 
     // TODO: Use `struct` to define globally -> たぶん main に書けばいい！！！けどその場合は引数の取り回しが課題だね。実行時間で比較だな
+    // 前GPTに教えてもらったコードを試す。同期で定義できるクライアントがあるならそれでいいけど、ダメならあの複雑なやつをうまく抽象化したい。
     let config = aws_config::load_from_env().await;
     let s3 = aws_sdk_s3::Client::new(&config);
 
-    let cache_bucket_name =
-        env::var("CACHE_BUCKET_NAME").expect("'CACHE_BUCKET_NAME' env var is not set.");
-
     let res = s3
         .get_object()
-        .bucket(cache_bucket_name)
+        .bucket(&*CACHE_BUCKET_NAME)
         .key(KEY)
         .send()
         .await
