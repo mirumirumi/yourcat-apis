@@ -28,6 +28,7 @@ Globals:
       Variables:
         LOG_LEVEL: !If [IsPrd, INFO, DEBUG]
         ENV_NAME: !Sub ${EnvironmentName}
+        RUST_BACKTRACE: 1
         API_ALLOW_ORIGIN: !Sub ${ApiAllowOrigin}
 
 

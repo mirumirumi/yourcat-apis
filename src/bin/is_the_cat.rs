@@ -89,8 +89,6 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
         .await
         .expect("Failed to open the image file in `/tmp/`.");
 
-    // TODO: ? でraiseしたエラーは、中身がちゃんとわかる？わからないならexpectを書く意義がある
-
     let res = rekognition
         .detect_labels()
         .image(
@@ -126,7 +124,12 @@ fn extract_label_data(label_data: &DetectLabelsOutput, name: &str) -> Result<Det
         bounding_box: None,
     };
 
-    for label in label_data.labels().unwrap().iter() {
+    let labels = match label_data.labels() {
+        Some(label) => label,
+        None => return Ok(result),
+    };
+
+    for label in labels.iter() {
         if label.name().unwrap() == name {
             if CONFIDENCE_THRESHOLD < label.confidence().unwrap() {
                 result.judge_to(true);

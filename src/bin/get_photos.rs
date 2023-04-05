@@ -30,9 +30,9 @@ struct Size {
     height: f64,
 }
 
+#[rustfmt::skip]
 lazy_static! {
-    static ref CACHE_BUCKET_NAME: String =
-        env::var("CACHE_BUCKET_NAME").expect("'CACHE_BUCKET_NAME' env var is not set.");
+    static ref CACHE_BUCKET_NAME: String = env::var("CACHE_BUCKET_NAME").expect("'CACHE_BUCKET_NAME' env var is not set.");
 }
 
 async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
