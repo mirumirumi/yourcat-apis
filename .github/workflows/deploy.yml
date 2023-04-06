@@ -11,11 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
       - uses: aws-actions/setup-sam@v2
 
       - name: Sign in to AWS
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-region: ap-northeast-1
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
