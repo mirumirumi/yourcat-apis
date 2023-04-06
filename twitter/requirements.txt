@@ -1,3 +1,3 @@
 aws_lambda_powertools
 boto3
-TwitterAPI
+TwitterAPI==2.7.13
