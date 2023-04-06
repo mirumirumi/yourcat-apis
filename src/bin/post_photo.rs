@@ -5,7 +5,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use chrono::Utc;
 use chrono_tz::Asia::Tokyo;
 use lambda_http::{run, Body, Error, Request, RequestExt, Response};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -20,6 +20,22 @@ mod utils {
 }
 
 use utils::{lambda, responses::*};
+
+#[rustfmt::skip]
+static IMAGE_BUCKET_NAME: Lazy<String> = Lazy::new(|| env::var("IMAGE_BUCKET_NAME").expect("\"IMAGE_BUCKET_NAME\" env var is not set."));
+#[rustfmt::skip]
+static CACHE_BUCKET_NAME: Lazy<String> = Lazy::new(|| env::var("CACHE_BUCKET_NAME").expect("\"CACHE_BUCKET_NAME\" env var is not set."));
+#[rustfmt::skip]
+static IMAGE_TABLE_NAME: Lazy<String> = Lazy::new(|| env::var("IMAGE_TABLE_NAME").expect("\"IMAGE_TABLE_NAME\" env var is not set."));
+#[rustfmt::skip]
+static INVOKE_LAMBDA_NAME: Lazy<String> = Lazy::new(|| env::var("INVOKE_LAMBDA_NAME").expect("\"INVOKE_LAMBDA_NAME\" env var is not set."));
+
+#[derive(Clone)]
+struct Sdk {
+    s3: aws_sdk_s3::Client,
+    dynamodb: aws_sdk_dynamodb::Client,
+    lambda: aws_sdk_lambda::Client,
+}
 
 #[derive(Deserialize)]
 struct ImageData {
@@ -61,22 +77,9 @@ impl From<HashMap<String, AttributeValue>> for TableItem {
     }
 }
 
-#[rustfmt::skip]
-lazy_static! {
-    static ref IMAGE_BUCKET_NAME: String = env::var("IMAGE_BUCKET_NAME").expect("'IMAGE_BUCKET_NAME' env var is not set.");
-    static ref CACHE_BUCKET_NAME: String = env::var("CACHE_BUCKET_NAME").expect("'CACHE_BUCKET_NAME' env var is not set.");
-    static ref IMAGE_TABLE_NAME: String = env::var("IMAGE_TABLE_NAME").expect("'IMAGE_TABLE_NAME' env var is not set.");
-    static ref INVOKE_LAMBDA_NAME: String = env::var("INVOKE_LAMBDA_NAME").expect("'INVOKE_LAMBDA_NAME' env var is not set.");
-}
-
-async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
+async fn lambda_handler(sdk: Sdk, request: Request) -> Result<Response<Body>, Error> {
     let context = request.lambda_context();
     lambda::log_incoming_event(&request, context);
-
-    let config = aws_config::load_from_env().await;
-    let s3 = aws_sdk_s3::Client::new(&config);
-    let dynamodb = aws_sdk_dynamodb::Client::new(&config);
-    let lambda = aws_sdk_lambda::Client::new(&config);
 
     let key = Uuid::new_v4().to_string();
     let ext = "jpg";
@@ -92,12 +95,7 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
     lambda::save_image_in_temp(
         &image_data.image_data.base64,
         &key,
-        match ext {
-            "jpg" => lambda::Extension::JPG,
-            "jpeg" => lambda::Extension::JPG,
-            "png" => lambda::Extension::PNG,
-            _ => panic!("Invalid image file extension input."),
-        },
+        lambda::Extension::JPG,
         None,
     )?;
 
@@ -107,7 +105,7 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
     let ext = format!(".{}", ext);
 
     // Save the image data to DB
-    dynamodb
+    sdk.dynamodb
         .put_item()
         .table_name(&*IMAGE_TABLE_NAME)
         .item("file_id", AttributeValue::S(key))
@@ -127,7 +125,8 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
 
     // Save the image file to S3
     let mut file = File::open(format!("/tmp/{}", file_name))?;
-    s3.put_object()
+    sdk.s3
+        .put_object()
         .bucket(&*IMAGE_BUCKET_NAME)
         .key(&file_name)
         .body({
@@ -143,7 +142,7 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
     // Don't remove file in `/tmp/` because the file name is UUID which guarantees uniqueness enough.
 
     // Tweet by the bot
-    lambda
+    sdk.lambda
         .invoke()
         .function_name(&*INVOKE_LAMBDA_NAME)
         .invocation_type(InvocationType::Event)
@@ -154,7 +153,8 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
         .await?;
 
     // Scan entire table to update
-    let res = dynamodb
+    let res = sdk
+        .dynamodb
         .scan()
         .table_name(&*IMAGE_TABLE_NAME)
         .send()
@@ -167,7 +167,8 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
         .map(|item| TableItem::from(item.clone()))
         .collect();
 
-    s3.put_object()
+    sdk.s3
+        .put_object()
         .bucket(&*CACHE_BUCKET_NAME)
         .key("scanned_data.json")
         .body(ByteStream::from(
@@ -192,5 +193,19 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(lambda::init_app(lambda_handler)).await
+    let config = aws_config::load_from_env().await;
+    let s3 = aws_sdk_s3::Client::new(&config);
+    let dynamodb = aws_sdk_dynamodb::Client::new(&config);
+    let lambda = aws_sdk_lambda::Client::new(&config);
+
+    let sdk = Sdk {
+        s3,
+        dynamodb,
+        lambda,
+    };
+
+    run(lambda::init_app(|request| {
+        lambda_handler(sdk.clone(), request)
+    }))
+    .await
 }

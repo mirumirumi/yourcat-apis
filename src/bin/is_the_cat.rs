@@ -18,6 +18,11 @@ use utils::{lambda, responses::*};
 
 const CONFIDENCE_THRESHOLD: f32 = 60.0;
 
+#[derive(Clone)]
+struct Sdk {
+    rekognition: aws_sdk_rekognition::Client,
+}
+
 #[derive(Deserialize)]
 struct ImageData {
     image_data: ImageDataInfo,
@@ -55,16 +60,12 @@ impl DetectResult {
     }
 }
 
-async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
+async fn lambda_handler(sdk: Sdk, request: Request) -> Result<Response<Body>, Error> {
     let context = request.lambda_context();
     lambda::log_incoming_event(&request, context);
 
-    let config = aws_config::load_from_env().await;
-    let rekognition = aws_sdk_rekognition::Client::new(&config);
-
     let key = Uuid::new_v4().to_string();
-    let ext = "jpg";
-    let file_name = format!("{}.{}", key, ext);
+    let file_name = format!("{}.jpg", key);
 
     let payload = match request.body() {
         Body::Text(text) => text.clone(),
@@ -76,12 +77,7 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
     lambda::save_image_in_temp(
         &image_data.image_data.base64,
         &key,
-        match ext {
-            "jpg" => lambda::Extension::JPG,
-            "jpeg" => lambda::Extension::JPG,
-            "png" => lambda::Extension::PNG,
-            _ => panic!("Invalid image file extension input."),
-        },
+        lambda::Extension::JPG,
         None,
     )?;
 
@@ -89,7 +85,8 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
         .await
         .expect("Failed to open the image file in `/tmp/`.");
 
-    let res = rekognition
+    let res = sdk
+        .rekognition
         .detect_labels()
         .image(
             Image::builder()
@@ -154,5 +151,13 @@ fn extract_label_data(label_data: &DetectLabelsOutput, name: &str) -> Result<Det
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(lambda::init_app(lambda_handler)).await
+    let config = aws_config::load_from_env().await;
+    let rekognition = aws_sdk_rekognition::Client::new(&config);
+
+    let sdk = Sdk { rekognition };
+
+    run(lambda::init_app(|request| {
+        lambda_handler(sdk.clone(), request)
+    }))
+    .await
 }

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use lambda_http::{run, Body, Error, Request, RequestExt, Response};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{env, str};
@@ -13,8 +13,16 @@ mod utils {
 
 use utils::{lambda, responses::*};
 
+#[rustfmt::skip]
+static CACHE_BUCKET_NAME: Lazy<String> = Lazy::new(|| env::var("CACHE_BUCKET_NAME").expect("\"CACHE_BUCKET_NAME\" env var is not set."));
+
 const KEY: &str = "scanned_data.json";
 const SHOW_IMAGE_COUNT: usize = 100;
+
+#[derive(Clone)]
+struct Sdk {
+    s3: aws_sdk_s3::Client,
+}
 
 #[derive(Deserialize, Serialize)]
 struct Photo {
@@ -30,21 +38,12 @@ struct Size {
     height: f64,
 }
 
-#[rustfmt::skip]
-lazy_static! {
-    static ref CACHE_BUCKET_NAME: String = env::var("CACHE_BUCKET_NAME").expect("'CACHE_BUCKET_NAME' env var is not set.");
-}
-
-async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
+async fn lambda_handler(sdk: Sdk, request: Request) -> Result<Response<Body>, Error> {
     let context = request.lambda_context();
     lambda::log_incoming_event(&request, context);
 
-    // TODO: Use `struct` to define globally -> たぶん main に書けばいい！！！けどその場合は引数の取り回しが課題だね。実行時間で比較だな
-    // 前GPTに教えてもらったコードを試す。同期で定義できるクライアントがあるならそれでいいけど、ダメならあの複雑なやつをうまく抽象化したい。
-    let config = aws_config::load_from_env().await;
-    let s3 = aws_sdk_s3::Client::new(&config);
-
-    let res = s3
+    let res = sdk
+        .s3
         .get_object()
         .bucket(&*CACHE_BUCKET_NAME)
         .key(KEY)
@@ -76,5 +75,13 @@ async fn lambda_handler(request: Request) -> Result<Response<Body>, Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(lambda::init_app(lambda_handler)).await
+    let config = aws_config::load_from_env().await;
+    let s3 = aws_sdk_s3::Client::new(&config);
+
+    let sdk = Sdk { s3 };
+
+    run(lambda::init_app(|request| {
+        lambda_handler(sdk.clone(), request)
+    }))
+    .await
 }

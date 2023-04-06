@@ -4,14 +4,13 @@ use http::{
     header::{self, HeaderName},
     HeaderValue,
 };
-use image::{self, DynamicImage, ImageFormat, ImageOutputFormat};
+use image::{self, ImageFormat};
 use lambda_http::{
-    http::Method, request::RequestContext, service_fn, tower::util::ServiceFn, Body,
-    Error as LambdaError, Request, RequestExt, Response,
+    http::Method, lambda_runtime::Context, request::RequestContext, service_fn,
+    tower::util::ServiceFn, Body, Error as LambdaError, Request, RequestExt, Response,
 };
-use lambda_runtime::Context;
 use regex::Regex;
-use std::{env, fs::File, future::Future, io::Cursor, path::Path, str::FromStr};
+use std::{env, future::Future, io::Cursor, str::FromStr};
 use tower_http::cors::{Cors, CorsLayer};
 use tracing::{info, Level};
 
@@ -33,7 +32,7 @@ where
     let cors_layer = CorsLayer::new()
         .allow_origin(
             env::var("API_ALLOW_ORIGIN")
-                .expect("'API_ALLOW_ORIGIN' env var is not set.")
+                .expect("\"API_ALLOW_ORIGIN\" env var is not set.")
                 .parse::<HeaderValue>()
                 .unwrap(),
         )
@@ -60,36 +59,28 @@ where
 }
 
 pub fn log_incoming_event(request: &Request, context: Context) {
-    // All original `request_context` (not all of them are logged now)
-    /*
-    let request_context = request.request_context();
-    println!(
-        "{:#?}",
-        serde_json::to_string(&request_context)
-            .unwrap_or_else(|_| "No request context".to_string())
-    );
-    */
-
-    // Note that in the case of `{proxy+}`,
-    // the requested endpoint is not known at all unless the path parameter is logged
-
     if let RequestContext::ApiGatewayV1(request_context) = request.request_context() {
-        // TODO: query parameter などの取得
-
         info!(
             request_id = %context.request_id,
+            request_time = %request_context.request_time.unwrap_or_else(|| "No request time".to_string()),
             http_version = ?request.version(),
             method = ?request.method(),
-            resource_path = ?request_context.resource_path,
-            path = ?request_context.path,
+            resource_path = %request_context.resource_path.unwrap_or_else(|| "No resource path".to_string()),
             fullpath = %request.uri(),
+            path = %request_context.path.unwrap_or_else(|| "No path".to_string()),
+            path_params = ?request.path_parameters(),
+            query_params = ?request.query_string_parameters(),
             headers = ?request.headers(),
             body = ?request.body(),
-            domain_name = ?request_context.domain_name,
-            stage_name = ?request_context.stage,
-            apigw_request_id = ?request_context.request_id,
-            source_ip = ?request_context.identity.source_ip,
-            ua = ?request_context.identity.user_agent,
+            api_id = %request_context.apiid.unwrap_or_else(|| "No api id".to_string()),
+            domain_name = %request_context.domain_name.unwrap_or_else(|| "No domain name".to_string()),
+            stage = %request_context.stage.unwrap_or_else(|| "No stage".to_string()),
+            stage_variables = ?request.stage_variables(),
+            apigw_request_id = %request_context.request_id.unwrap_or_else(|| "No API Gateway request id".to_string()),
+            apigw_resource_id = %request_context.resource_id.unwrap_or_else(|| "No API Gateway resource id".to_string()),
+            source_ip = %request_context.identity.source_ip.unwrap_or_else(|| "No source ip".to_string()),
+            ua = %request_context.identity.user_agent.unwrap_or_else(|| "No user agent".to_string()),
+            authorizer = ?request_context.authorizer, // Structuring?
             log_stream = %context.env_config.log_stream,
             log_group = %context.env_config.log_group,
             xray_trace_id = %context.xray_trace_id.unwrap_or_else(|| "None".to_string()),
@@ -98,7 +89,6 @@ pub fn log_incoming_event(request: &Request, context: Context) {
             function_name = %context.env_config.function_name,
             version = %context.env_config.version,
             memory = ?context.env_config.memory,
-            identity = ?context.identity,
             deadline = ?context.deadline,
             "Lambda incoming event:",
         );
@@ -118,7 +108,6 @@ pub fn log_incoming_event(request: &Request, context: Context) {
             function_name = %context.env_config.function_name,
             version = %context.env_config.version,
             memory = ?context.env_config.memory,
-            identity = ?context.identity,
             deadline = ?context.deadline,
             "Lambda incoming event:",
         );
@@ -162,22 +151,6 @@ pub fn save_image_in_temp(
             .expect("Failed `ImageFormat::from_extension()` with `input_ext`"),
     )?;
 
-    let output_format = match want_ext {
-        Extension::JPG => ImageOutputFormat::Jpeg(100),
-        Extension::PNG => ImageOutputFormat::Png,
-    };
-
-    let same_ext = match (input_ext, &want_ext) {
-        ("jpg", Extension::JPG) | ("jpeg", Extension::JPG) | ("png", Extension::PNG) => true,
-        _ => false,
-    };
-
-    if !same_ext {
-        if want_ext == Extension::JPG {
-            image = DynamicImage::ImageRgb8(image.into_rgb8());
-        }
-    }
-
     if let Some((width, height)) = size {
         image = image.resize(width, height, image::imageops::FilterType::CatmullRom);
     }
@@ -191,8 +164,7 @@ pub fn save_image_in_temp(
         }
     );
 
-    let mut output = File::create(&Path::new(&temp_path))?;
-    image.write_to(&mut output, output_format)?;
+    image.save(temp_path).unwrap();
 
     Ok(())
 }
